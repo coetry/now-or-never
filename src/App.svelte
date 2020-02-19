@@ -1,52 +1,32 @@
 <script>
-  import { throttle, pingNetlifyApi } from './utils'
-  import UsageExample from './UsageExample.svelte'
-  import Footer from './Footer.svelte'
-  let isNetlify
-  let OSScheck = {}
-  let server
-  let nfrid = "x-nf-request-id";
+  import UsageExample from "./UsageExample.svelte";
+  import Footer from "./Footer.svelte";
+  let isNow;
+  let nowid = "x-now-id";
   let headers = undefined;
-  let path = document.location.pathname.slice(1) || 'www.netlify.com';
-  let _path = path
-  let requestPromise = pingServer(_path)
-  let followonPromise = pingApi()
+  let path = document.location.pathname.slice(1) || "https://zeit.co";
+  let _path = path;
+  let requestPromise = pingServer(_path);
 
   async function pingServer(v) {
-    _path = v
+    _path = v;
     try {
-      const x = await fetch(`/.netlify/functions/isNetlify?path=${_path}`)
-                  .then(res => res.json())
+      const x = await fetch(`/api/is-now?path=${_path}`).then(res =>
+        res.json()
+      );
       headers = x;
       console.log({ headers });
-      isNetlify = !!(headers && headers[nfrid])
-      server = headers && headers["server"];
-      followonPromise = pingApi()
+      isNow = !!(headers && headers[nowid]);
+      followonPromise = pingApi();
     } catch (err) {
-      console.error('error pinging the isNetlify function, please check')
-      console.error({ err })
+      console.error("error pinging the is-now function, please check");
+      console.error({ err });
     }
   }
   const handleKeyUp = v => {
-    requestPromise = pingServer(v)
-  }
-  handleKeyUp(path)
-  async function pingApi() {
-    OSScheck = { isOSS: false }
-    if (_path.length > 3) {
-      try {
-        const res = await pingNetlifyApi(_path)
-        OSScheck.isOSS = true
-        OSScheck.account_name = res.account_name
-        OSScheck.published_deploy = res.published_deploy
-        OSScheck.repo_url = res.repo_url
-        OSScheck.admin_url = res.admin_url
-      } catch (err) {
-        console.log('oss check failed (not an error)', err)
-      }
-    }
-  }
-    
+    requestPromise = pingServer(v);
+  };
+  handleKeyUp(path);
 </script>
 
 <style>
@@ -82,7 +62,7 @@
     font-weight: bold;
     color: lightcyan;
   }
-  
+
   pre {
     background-color: lightgray;
     border-radius: 10px;
@@ -122,41 +102,35 @@
 
 <main>
   <div class="header">
-    <input type="text" class="domaininput" bind:value={path} on:input={({ target: { value } }) => handleKeyUp(value)} />
+    <input
+      type="text"
+      class="domaininput"
+      bind:value={path}
+      on:input={({ target: { value } }) => handleKeyUp(value)} />
   </div>
   <div class="middle">
-    <h1>Is This Netlify?</h1>
+    <h1>Is This ZEIT Now?</h1>
   </div>
 
   <div class="status">
     {#await requestPromise}
       <p>
-        <span class={'bigtext'}>
-          checking...
-        </span>
+        <span class={'bigtext'}>checking...</span>
       </p>
     {:then}
       <p>
-        <span class={'bigtext ' + (isNetlify ? ' success' : 'fail' )}>
-          {headers[nfrid] ? 'Yup 🎉' : 'Not Yet!'}
+        <span class={'bigtext ' + (isNow ? ' success' : 'fail')}>
+          {headers[nowid] ? 'Yup 🎉' : 'Not Yet!'}
         </span>
       </p>
       <p>
         Server Header:
         <span class="serverheader">{headers['server']}</span>
       </p>
-      {#if OSScheck.isOSS}
-      <p>
-        Repo: <a href={OSScheck.repo_url} target="_blank" class="serverheader">{OSScheck.repo_url}</a>
-      </p>
-      <p>
-        Deploy Logs: <a href={OSScheck.admin_url} target="_blank" class="serverheader">{OSScheck.admin_url}</a>
-      </p>
-      {/if}
     {:catch error}
       <p style="color: red">{error.message}</p>
     {/await}
     <UsageExample />
   </div>
-  <Footer {headers} />  
+  <Footer {headers} />
 </main>
